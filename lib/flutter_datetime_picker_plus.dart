@@ -13,6 +13,22 @@ export 'package:flutter_datetime_picker_plus/src/date_model.dart';
 export 'package:flutter_datetime_picker_plus/src/datetime_picker_theme.dart';
 export 'package:flutter_datetime_picker_plus/src/i18n_model.dart';
 
+/// Format for changing the date picker format
+/// May be you want to display the date picker with the format of [DD MM YYYY]
+/// then you can use [DatePickerFormat.dd__mm__yyyy] as format to passed
+///
+enum DatePickerFormat {
+  /// Format YYYY-MM-DD
+  yyyy_mm_dd,
+
+  /// Format MM-DD-YYYY
+  mm__dd_yyyy,
+
+  /// Format DD-MM-YYYY
+  dd__mm__yyyy
+}
+
+
 typedef DateChangedCallback(DateTime time);
 typedef DateCancelledCallback();
 typedef String? StringAtIndexCallBack(int index);
@@ -29,6 +45,7 @@ class DatePicker {
     DateChangedCallback? onChanged,
     DateChangedCallback? onConfirm,
     DateCancelledCallback? onCancel,
+    DatePickerFormat? datePickerFormat,
     locale = LocaleType.en,
     DateTime? currentTime,
     picker_theme.DatePickerTheme? theme,
@@ -38,6 +55,7 @@ class DatePicker {
       _DatePickerRoute(
         showTitleActions: showTitleActions,
         onChanged: onChanged,
+        datePickerFormat: datePickerFormat,
         onConfirm: onConfirm,
         onCancel: onCancel,
         locale: locale,
@@ -129,6 +147,7 @@ class DatePicker {
     DateTime? minTime,
     DateTime? maxTime,
     DateChangedCallback? onChanged,
+    DatePickerFormat? datePickerFormat,
     DateChangedCallback? onConfirm,
     DateCancelledCallback? onCancel,
     locale = LocaleType.en,
@@ -163,6 +182,7 @@ class DatePicker {
     BuildContext context, {
     bool showTitleActions = true,
     DateChangedCallback? onChanged,
+    DatePickerFormat? datePickerFormat,
     DateChangedCallback? onConfirm,
     DateCancelledCallback? onCancel,
     locale = LocaleType.en,
@@ -172,6 +192,7 @@ class DatePicker {
     return await Navigator.push(
       context,
       _DatePickerRoute(
+        datePickerFormat: datePickerFormat,
         showTitleActions: showTitleActions,
         onChanged: onChanged,
         onConfirm: onConfirm,
@@ -190,6 +211,7 @@ class _DatePickerRoute<T> extends PopupRoute<T> {
   _DatePickerRoute({
     this.showTitleActions,
     this.onChanged,
+    this.datePickerFormat,
     this.onConfirm,
     this.onCancel,
     picker_theme.DatePickerTheme? theme,
@@ -205,6 +227,8 @@ class _DatePickerRoute<T> extends PopupRoute<T> {
   final DateChangedCallback? onChanged;
   final DateChangedCallback? onConfirm;
   final DateCancelledCallback? onCancel;
+  /// Customize design of date picker
+  final DatePickerFormat? datePickerFormat;
   final LocaleType? locale;
   final picker_theme.DatePickerTheme theme;
   final BasePickerModel pickerModel;
@@ -238,6 +262,7 @@ class _DatePickerRoute<T> extends PopupRoute<T> {
       context: context,
       removeTop: true,
       child: _DatePickerComponent(
+        datePickerFormat: datePickerFormat ?? DatePickerFormat.yyyy_mm_dd,
         onChanged: onChanged,
         locale: this.locale,
         route: this,
@@ -252,12 +277,16 @@ class _DatePickerComponent extends StatefulWidget {
   _DatePickerComponent({
     Key? key,
     required this.route,
+    required this.datePickerFormat,
     required this.pickerModel,
     this.onChanged,
     this.locale,
   }) : super(key: key);
 
   final DateChangedCallback? onChanged;
+
+  /// Date picker format
+  final DatePickerFormat datePickerFormat;
 
   final _DatePickerRoute route;
 
@@ -328,7 +357,8 @@ class _DatePickerState extends State<_DatePickerComponent> {
   }
 
   Widget _renderPickerView(picker_theme.DatePickerTheme theme) {
-    Widget itemView = _renderItemView(theme);
+    Widget itemView =
+    _renderItemView(theme, datePickerFormat: widget.datePickerFormat);
     if (widget.route.showTitleActions == true) {
       return Column(
         children: <Widget>[
@@ -397,77 +427,147 @@ class _DatePickerState extends State<_DatePickerComponent> {
     );
   }
 
-  Widget _renderItemView(picker_theme.DatePickerTheme theme) {
+  Widget _renderItemView(picker_theme.DatePickerTheme theme,
+      {required DatePickerFormat datePickerFormat}) {
     return Container(
       color: theme.backgroundColor,
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Container(
-              child: widget.pickerModel.layoutProportions()[0] > 0
-                  ? _renderColumnView(
-                      ValueKey(widget.pickerModel.currentLeftIndex()),
-                      theme,
-                      widget.pickerModel.leftStringAtIndex,
-                      leftScrollCtrl,
-                      widget.pickerModel.layoutProportions()[0], (index) {
-                      widget.pickerModel.setLeftIndex(index);
-                    }, (index) {
-                      setState(() {
-                        refreshScrollOffset();
-                        _notifyDateChanged();
-                      });
-                    })
-                  : null,
-            ),
-            Text(
-              widget.pickerModel.leftDivider(),
-              style: theme.itemStyle,
-            ),
-            Container(
-              child: widget.pickerModel.layoutProportions()[1] > 0
-                  ? _renderColumnView(
-                      ValueKey(widget.pickerModel.currentLeftIndex()),
-                      theme,
-                      widget.pickerModel.middleStringAtIndex,
-                      middleScrollCtrl,
-                      widget.pickerModel.layoutProportions()[1], (index) {
-                      widget.pickerModel.setMiddleIndex(index);
-                    }, (index) {
-                      setState(() {
-                        refreshScrollOffset();
-                        _notifyDateChanged();
-                      });
-                    })
-                  : null,
-            ),
-            Text(
-              widget.pickerModel.rightDivider(),
-              style: theme.itemStyle,
-            ),
-            Container(
-              child: widget.pickerModel.layoutProportions()[2] > 0
-                  ? _renderColumnView(
-                      ValueKey(widget.pickerModel.currentMiddleIndex() * 100 +
-                          widget.pickerModel.currentLeftIndex()),
-                      theme,
-                      widget.pickerModel.rightStringAtIndex,
-                      rightScrollCtrl,
-                      widget.pickerModel.layoutProportions()[2], (index) {
-                      widget.pickerModel.setRightIndex(index);
-                    }, (index) {
-                      setState(() {
-                        refreshScrollOffset();
-                        _notifyDateChanged();
-                      });
-                    })
-                  : null,
-            ),
-          ],
-        ),
+        child: _buildDatePickerFormat(datePickerFormat, theme),
       ),
+    );
+  }
+
+  Row _buildDatePickerFormat(
+      DatePickerFormat datePickerFormat, picker_theme.DatePickerTheme theme) {
+    switch (datePickerFormat) {
+      case DatePickerFormat.yyyy_mm_dd:
+        return _buildDatePickerWithYYYYMMDDFormat(theme);
+      case DatePickerFormat.mm__dd_yyyy:
+        return _buildDatePickerWithMMDDYYYYFormat(theme);
+      case DatePickerFormat.dd__mm__yyyy:
+        return _buildDatePickerWithDDMMYYYYFormat(theme);
+      default:
+        throw Exception('DatePickerFormat not supported');
+    }
+  }
+
+  Row _buildDatePickerWithYYYYMMDDFormat(picker_theme.DatePickerTheme theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        _buildYear(theme),
+        Text(
+          widget.pickerModel.leftDivider(),
+          style: theme.itemStyle,
+        ),
+        _buildMonth(theme),
+        Text(
+          widget.pickerModel.rightDivider(),
+          style: theme.itemStyle,
+        ),
+        _buildDay(theme),
+      ],
+    );
+  }
+
+  Row _buildDatePickerWithMMDDYYYYFormat(picker_theme.DatePickerTheme theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        _buildMonth(theme),
+        Text(
+          widget.pickerModel.leftDivider(),
+          style: theme.itemStyle,
+        ),
+        _buildDay(theme),
+        Text(
+          widget.pickerModel.rightDivider(),
+          style: theme.itemStyle,
+        ),
+        _buildYear(theme),
+      ],
+    );
+  }
+
+  //// Build date picker with DD-MM-YYYY
+  Row _buildDatePickerWithDDMMYYYYFormat(picker_theme.DatePickerTheme theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        _buildDay(theme),
+        Text(
+          widget.pickerModel.leftDivider(),
+          style: theme.itemStyle,
+        ),
+        _buildMonth(theme),
+        Text(
+          widget.pickerModel.rightDivider(),
+          style: theme.itemStyle,
+        ),
+        _buildYear(theme),
+      ],
+    );
+  }
+
+  Container _buildYear(picker_theme.DatePickerTheme theme) {
+    return Container(
+      child: widget.pickerModel.layoutProportions()[0] > 0
+          ? _renderColumnView(
+          ValueKey(widget.pickerModel.currentLeftIndex()),
+          theme,
+          widget.pickerModel.leftStringAtIndex,
+          leftScrollCtrl,
+          widget.pickerModel.layoutProportions()[0], (index) {
+        widget.pickerModel.setLeftIndex(index);
+      }, (index) {
+        setState(() {
+          refreshScrollOffset();
+          _notifyDateChanged();
+        });
+      })
+          : null,
+    );
+  }
+
+  Container _buildMonth(picker_theme.DatePickerTheme theme) {
+    return Container(
+      child: widget.pickerModel.layoutProportions()[1] > 0
+          ? _renderColumnView(
+          ValueKey(widget.pickerModel.currentLeftIndex()),
+          theme,
+          widget.pickerModel.middleStringAtIndex,
+          middleScrollCtrl,
+          widget.pickerModel.layoutProportions()[1], (index) {
+        widget.pickerModel.setMiddleIndex(index);
+      }, (index) {
+        setState(() {
+          refreshScrollOffset();
+          _notifyDateChanged();
+        });
+      })
+          : null,
+    );
+  }
+
+  Container _buildDay(picker_theme.DatePickerTheme theme) {
+    return Container(
+      child: widget.pickerModel.layoutProportions()[2] > 0
+          ? _renderColumnView(
+          ValueKey(widget.pickerModel.currentMiddleIndex() * 100 +
+              widget.pickerModel.currentLeftIndex()),
+          theme,
+          widget.pickerModel.rightStringAtIndex,
+          rightScrollCtrl,
+          widget.pickerModel.layoutProportions()[2], (index) {
+        widget.pickerModel.setRightIndex(index);
+      }, (index) {
+        setState(() {
+          refreshScrollOffset();
+          _notifyDateChanged();
+        });
+      })
+          : null,
     );
   }
 
